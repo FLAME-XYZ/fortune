@@ -1,0 +1,2746 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WinGo - FORTUNE</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 10px;
+        }
+        
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: #0f3460;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        /* Header dengan logo dan notifikasi bergerak */
+        .header {
+            background: linear-gradient(90deg, #e94560 0%, #0f3460 100%);
+            padding: 15px;
+            text-align: center;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Logo PNG */
+        .logo-img {
+            height: 150px;
+            width: auto;
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+        }
+        
+        /* Tombol toggle popup dengan ikon mata di pojok kiri atas */
+        .toggle-popup-btn {
+            position: absolute;
+            left: 80px;
+            top: 143%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+        
+        .toggle-popup-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .eye-icon {
+            width: 20px;
+            height: 20px;
+            position: relative;
+        }
+        
+        .eye-icon .eye-open {
+            display: block;
+        }
+        
+        .eye-icon .eye-closed {
+            display: none;
+        }
+        
+        .toggle-popup-btn.active .eye-icon .eye-open {
+            display: none;
+        }
+        
+        .toggle-popup-btn.active .eye-icon .eye-closed {
+            display: block;
+        }
+        
+        .toggle-popup-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 300px;
+            width: 90%;
+            animation: fadeInOut 3s ease-in-out;
+            opacity: 0;
+        }
+        
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+            10%, 90% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        .toast-icon {
+            font-size: 20px;
+        }
+        
+        .toast-success {
+            background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+            border-color: #00ffcc;
+        }
+        
+        .toast-error {
+            background: linear-gradient(135deg, #e94560 0%, #c44569 100%);
+            border-color: #ff4757;
+        }
+        
+        .toast-warning {
+            background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+            border-color: #ffa502;
+        }
+        
+        .toast-message {
+            flex: 1;
+            font-size: 14px;
+        }
+        
+        /* Pemberitahuan bergerak */
+        .notification-bar {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 0;
+            overflow: hidden;
+            position: relative;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .notification-content {
+            display: inline-block;
+            white-space: nowrap;
+            padding-left: 100%;
+            animation: scrollText 25s linear infinite;
+        }
+        
+        @keyframes scrollText {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+        
+        .notification-content span {
+            color: #ffd700;
+            font-weight: bold;
+            margin-right: 30px;
+        }
+        
+        /* Saldo Section */
+        .saldo-section {
+            padding: 15px;
+            background: #1a1a2e;
+            margin: 10px;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid #e94560;
+        }
+        
+        .saldo-label {
+            font-size: 14px;
+            color: #8f9bb3;
+        }
+        
+        .saldo-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        /* Timer Section */
+        .timer-section {
+            margin: 10px;
+            background: #1a1a2e;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid #2d3746;
+        }
+        
+        .timer-tabs {
+            display: flex;
+        }
+        
+        .timer-tab {
+            flex: 1;
+            padding: 15px 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            color: #8f9bb3;
+            background: #2d3436;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .timer-tab.active {
+            background: #1a1a2e;
+            color: white;
+            border-bottom-color: #e94560;
+        }
+        
+        .timer-display-container {
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .timer-display {
+            font-size: 48px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: inline-block;
+            letter-spacing: 3px;
+        }
+        
+        .periode-display {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #ffd700;
+        }
+        
+        /* Bet Section - Layout baru sesuai gambar */
+        .bet-section {
+            margin: 10px;
+            background: #1a1a2e;
+            border-radius: 15px;
+            padding: 15px;
+            border: 1px solid #2d3746;
+        }
+        
+        .bet-section-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            color: white;
+        }
+        
+        /* Tombol warna dalam 1 baris */
+        .warna-buttons-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        /* Angka Grid dalam 2 baris 5 kolom dengan tombol toggle di bawah angka 7 */
+        .angka-grid-lima-kolom {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .angka-btn {
+            padding: 20px 5px;
+            border-radius: 10px;
+            background: #2d3436;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .angka-btn:hover {
+            background: #3d4446;
+            transform: scale(1.05);
+        }
+        
+        .angka-btn.active {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            box-shadow: 0 0 10px rgba(0, 184, 148, 0.5);
+        }
+        
+        /* Tombol toggle kombinasi di bawah angka 7 */
+        .toggle-kombinasi-btn {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2d3436;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+        
+        .toggle-kombinasi-btn:hover {
+            background: #3d4446;
+            transform: translateX(-50%) scale(1.1);
+        }
+        
+        .toggle-kombinasi-btn i {
+            font-size: 16px;
+            color: #8f9bb3;
+            transition: transform 0.3s;
+        }
+        
+        .toggle-kombinasi-btn.collapsed i {
+            transform: rotate(180deg);
+        }
+        
+        /* Grid untuk KH KM BM BH - bisa disembunyikan */
+        .kombinasi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            max-height: 200px;
+            overflow: hidden;
+        }
+        
+        .kombinasi-grid.collapsed {
+            max-height: 0;
+            margin-bottom: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        /* Grid untuk KECIL BESAR */
+        .kecil-besar-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        /* Bet Buttons */
+        .bet-button {
+            padding: 15px 10px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60px;
+        }
+        
+        .bet-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .bet-button.active {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+        
+        /* Warna untuk bet button */
+        .bet-hijau {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white;
+        }
+        
+        .bet-ungu {
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            color: white;
+        }
+        
+        .bet-merah {
+            background: linear-gradient(135deg, #e94560 0%, #ff6b8b 100%);
+            color: white;
+        }
+        
+        .bet-kecil {
+            background: linear-gradient(135deg, #0984e3 0%, #74b9ff 100%);
+            color: white;
+        }
+        
+        .bet-besar {
+            background: linear-gradient(135deg, #fdcb6e 0%, #ffeaa7 100%);
+            color: #333;
+        }
+        
+        /* KH, KM, BM, BH dengan warna split */
+        .bet-kh {
+            background: linear-gradient(to right, #0984e3 50%, #00b894 50%);
+            color: white;
+        }
+        
+        .bet-km {
+            background: linear-gradient(to right, #0984e3 50%, #e94560 50%);
+            color: white;
+        }
+        
+        .bet-bm {
+            background: linear-gradient(to right, #fdcb6e 50%, #e94560 50%);
+            color: #333;
+        }
+        
+        .bet-bh {
+            background: linear-gradient(to right, #fdcb6e 50%, #00b894 50%);
+            color: #333;
+        }
+        
+        .bet-button-text {
+            font-size: 16px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .bet-button-multiplier {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        /* History Section */
+        .history-section {
+            margin: 10px;
+            background: #1a1a2e;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 80px;
+            border: 1px solid #2d3746;
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2d3746;
+        }
+        
+        .history-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .history-time {
+            font-size: 14px;
+            color: #8f9bb3;
+        }
+        
+        .history-tabs {
+            display: flex;
+            background: #2d3436;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .history-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 14px;
+            color: #8f9bb3;
+            transition: all 0.3s;
+        }
+        
+        .history-tab.active {
+            background: #e94560;
+            color: white;
+        }
+        
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .history-table th {
+            padding: 12px 8px;
+            text-align: center;
+            font-size: 12px;
+            color: #8f9bb3;
+            font-weight: normal;
+            border-bottom: 1px solid #2d3746;
+        }
+        
+        .history-table td {
+            padding: 12px 8px;
+            text-align: center;
+            font-size: 14px;
+            border-bottom: 1px solid #2d3746;
+        }
+        
+        /* Indikator warna untuk hasil riwayat */
+        .color-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .dot-hijau {
+            background-color: #00b894;
+            box-shadow: 0 0 5px rgba(0, 184, 148, 0.5);
+        }
+        
+        .dot-ungu {
+            background-color: #a29bfe;
+            box-shadow: 0 0 5px rgba(162, 155, 254, 0.5);
+        }
+        
+        .dot-merah {
+            background-color: #e94560;
+            box-shadow: 0 0 5px rgba(233, 69, 96, 0.5);
+        }
+        
+        .size-text {
+            font-weight: bold;
+        }
+        
+        .size-kecil {
+            color: #74b9ff;
+        }
+        
+        .size-besar {
+            color: #fdcb6e;
+        }
+        
+        .profit {
+            color: #00ff88;
+        }
+        
+        .loss {
+            color: #ff4444;
+        }
+        
+        .waiting {
+            color: #ffd700;
+        }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 20px);
+            max-width: 480px;
+            background: #1a1a2e;
+            border-radius: 15px;
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            z-index: 1000;
+            border: 1px solid #2d3746;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            color: #8f9bb3;
+            transition: all 0.3s;
+        }
+        
+        .nav-item.active {
+            color: #e94560;
+        }
+        
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .nav-text {
+            font-size: 12px;
+        }
+        
+        /* Popup Bet Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal-content {
+            background: #1a1a2e;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            padding: 25px;
+            text-align: center;
+            border: 2px solid #e94560;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 20px;
+        }
+        
+        .modal-message {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            color: #fff;
+        }
+        
+        .modal-bet-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .modal-bet-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .modal-bet-label {
+            color: #8f9bb3;
+        }
+        
+        .modal-bet-value {
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Bet Amount Controls */
+        .bet-amount-controls {
+            margin: 20px 0;
+        }
+        
+        .amount-presets {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .amount-preset {
+            padding: 12px 5px;
+            border-radius: 8px;
+            background: #2d3436;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .amount-preset:hover {
+            background: #3d4446;
+        }
+        
+        .amount-preset.active {
+            background: #e94560;
+            border-color: #ff6b8b;
+            color: white;
+        }
+        
+        .amount-preset.all-preset {
+            background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+        }
+        
+        .amount-preset.all-preset.active {
+            background: linear-gradient(135deg, #5a4fcf 0%, #928af5 100%);
+            border-color: #a29bfe;
+        }
+        
+        .amount-input-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .amount-input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            background: #2d3436;
+            border: 2px solid #3d4446;
+            color: white;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        .amount-input:focus {
+            outline: none;
+            border-color: #0984e3;
+            background: #3d4446;
+        }
+        
+        .amount-input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: #2d3436;
+        }
+        
+        .amount-input.editable {
+            background: #3d4446;
+            border-color: #0984e3;
+            cursor: text;
+        }
+        
+        .amount-set-btn {
+            padding: 12px 20px;
+            border-radius: 8px;
+            background: #0984e3;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .amount-set-btn:hover {
+            background: #74b9ff;
+        }
+        
+        .amount-set-btn:disabled {
+            background: #636e72;
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .amount-set-btn.active {
+            background: #00b894;
+        }
+        
+        .modal-bet-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .modal-bet-label {
+            color: #8f9bb3;
+        }
+        
+        .modal-bet-value {
+            color: white;
+            font-weight: bold;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+        }
+        
+        .modal-btn.cancel {
+            background: #636e72;
+            color: white;
+        }
+        
+        .modal-btn.confirm {
+            background: linear-gradient(90deg, #00b894 0%, #00cec9 100%);
+            color: white;
+        }
+        
+        .modal-btn.confirm:disabled {
+            background: #636e72;
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Result Modal */
+        .result-modal-content {
+            background: #1a1a2e;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 400px;
+            padding: 25px;
+            text-align: center;
+            border: 2px solid #00b894;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .result-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 20px;
+        }
+        
+        .result-number {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #ffd700;
+        }
+        
+        .result-type {
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .result-bet-status {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            text-align: left;
+        }
+        
+        .betting-closed {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        /* Responsive */
+        @media (max-width: 480px) {
+            .container {
+                border-radius: 15px;
+            }
+            
+            .timer-display {
+                font-size: 40px;
+            }
+            
+            .bet-button {
+                padding: 12px 5px;
+                min-height: 55px;
+            }
+            
+            .bet-button-text {
+                font-size: 14px;
+            }
+            
+            .angka-btn {
+                padding: 15px 5px;
+                font-size: 18px;
+            }
+            
+            .kombinasi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .toast {
+                max-width: 280px;
+                padding: 12px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header dengan logo dan tombol toggle popup -->
+        <div class="header">
+            <button class="toggle-popup-btn" id="togglePopupBtn" title="Toggle Popup Hasil">
+                <div class="eye-icon">
+                    <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 4C5 4 1 12 1 12C1 12 5 20 12 20C19 20 23 12 23 12C23 12 19 4 12 4Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <svg class="eye-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.94 17.94C16.23 19.24 14.21 20 12 20C5 20 1 12 1 12C1 12 2.55 8.55 5.84 6.15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9.9 4.24C10.58 4.08 11.29 4 12 4C19 4 23 12 23 12C23 12 22.28 13.7 20.86 15.32" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M1 1L23 23" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </button>
+            
+            <div class="logo-container">
+                <!-- Logo PNG - pastikan file logo.png ada di folder yang sama -->
+                <img src="logo.png" class="logo-img" alt="WinGo Logo">
+            </div>
+        </div>
+        
+        <!-- Pemberitahuan bergerak -->
+        <div class="notification-bar">
+            <div class="notification-content">
+                <span>🎉 Welcome to WinGo! Taruhan aman & terpercaya 🎉</span>
+                <span>💰 Bonus deposit 10% untuk member baru! 💰</span>
+                <span>⚡ Super cepat - Cepat - Standar ⚡</span>
+                <span>🎯 Tebak angka, warna, atau kombinasi! 🎯</span>
+            </div>
+        </div>
+        
+        <!-- Saldo -->
+        <div class="saldo-section">
+            <div class="saldo-label">SALDO</div>
+            <div class="saldo-value" id="saldoValue">100,000</div>
+        </div>
+        
+        <!-- Timer Section -->
+        <div class="timer-section">
+            <div class="timer-tabs">
+                <div class="timer-tab active" data-mode="supercepat">SILVER</div>
+                <div class="timer-tab" data-mode="cepat">GOLD</div>
+                <div class="timer-tab" data-mode="standar">BLACK</div>
+            </div>
+            
+            <div class="timer-display-container">
+                <div class="timer-display" id="timerDisplay">00:30</div>
+                <div class="periode-display">Periode: <span id="currentPeriod">2025121000</span></div>
+            </div>
+        </div>
+        
+        <!-- Bet Section - Layout baru -->
+        <div class="bet-section">
+            <div class="bet-section-title">PILIH JENIS TARUHAN</div>
+            
+            <!-- Tombol taruhan warna MERAH HIJAU UNGU -->
+            <div class="warna-buttons-row">
+                <div class="bet-button bet-merah" data-bet="merah">
+                    <div class="bet-button-text">MERAH</div>
+                    <div class="bet-button-multiplier">x2.0 / x1.5</div>
+                </div>
+                <div class="bet-button bet-ungu" data-bet="ungu">
+                    <div class="bet-button-text">UNGU</div>
+                    <div class="bet-button-multiplier">x4.5</div>
+                </div>
+                <div class="bet-button bet-hijau" data-bet="hijau">
+                    <div class="bet-button-text">HIJAU</div>
+                    <div class="bet-button-multiplier">x2.0 / x1.5</div>
+                </div>
+            </div>
+            
+            <!-- Angka Grid 5 kolom dengan tombol toggle -->
+            <div class="angka-grid-lima-kolom">
+                <div class="angka-btn" data-number="0">0</div>
+                <div class="angka-btn" data-number="1">1</div>
+                <div class="angka-btn" data-number="2">2</div>
+                <div class="angka-btn" data-number="3">3</div>
+                <div class="angka-btn" data-number="4">4</div>
+                <div class="angka-btn" data-number="5">5</div>
+                <div class="angka-btn" data-number="6">6</div>
+                <div class="angka-btn" data-number="7">7</div>
+                <div class="angka-btn" data-number="8">8</div>
+                <div class="angka-btn" data-number="9">9</div>
+                
+                <!-- Tombol toggle kombinasi di bawah angka 7 -->
+                <button class="toggle-kombinasi-btn" id="toggleKombinasiBtn" title="Sembunyikan/Tampilkan Kombinasi">
+                    <i>▼</i>
+                </button>
+            </div>
+            
+            <!-- Grid untuk KH KM BM BH -->
+            <div class="kombinasi-grid" id="kombinasiGrid">
+                <div class="bet-button bet-kh" data-bet="kecil-hijau">
+                    <div class="bet-button-text">K/H</div>
+                    <div class="bet-button-multiplier">x4.5</div>
+                </div>
+                <div class="bet-button bet-km" data-bet="kecil-merah">
+                    <div class="bet-button-text">K/M</div>
+                    <div class="bet-button-multiplier">x3.0</div>
+                </div>
+                <div class="bet-button bet-bm" data-bet="besar-merah">
+                    <div class="bet-button-text">B/M</div>
+                    <div class="bet-button-multiplier">x4.5</div>
+                </div>
+                <div class="bet-button bet-bh" data-bet="besar-hijau">
+                    <div class="bet-button-text">B/H</div>
+                    <div class="bet-button-multiplier">x3.0</div>
+                </div>
+            </div>
+            
+            <!-- Grid untuk KECIL BESAR -->
+            <div class="kecil-besar-grid">
+                <div class="bet-button bet-kecil" data-bet="kecil">
+                    <div class="bet-button-text">KECIL</div>
+                    <div class="bet-button-multiplier">x2.0</div>
+                </div>
+                <div class="bet-button bet-besar" data-bet="besar">
+                    <div class="bet-button-text">BESAR</div>
+                    <div class="bet-button-multiplier">x2.0</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History Section -->
+        <div class="history-section">
+            <div class="history-header">
+                <div class="history-title">RIWAYAT</div>
+                <div class="history-time" id="currentTime">00:00:00</div>
+            </div>
+            
+            <div class="history-tabs">
+                <div class="history-tab active" data-history="hasil">HASIL</div>
+                <div class="history-tab" data-history="saya">RIWAYAT SAYA</div>
+            </div>
+            
+            <table class="history-table" id="historyTable">
+                <thead>
+                    <tr>
+                        <th>PERIODE</th>
+                        <th>HASIL</th>
+                        <th>JENIS</th>
+                        <th>STATUS</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody">
+                    <!-- Riwayat akan diisi oleh JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="nav-item active">
+                <div class="nav-icon">🏠</div>
+                <div class="nav-text">Beranda</div>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">🎮</div>
+                <div class="nav-text">Games</div>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">📊</div>
+                <div class="nav-text">Aktivitas</div>
+            </div>
+            <div class="nav-item">
+                <div class="nav-icon">👤</div>
+                <div class="nav-text">Akun</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bet Modal (Popup saat klik taruhan) -->
+    <div class="modal" id="betModal">
+        <div class="modal-content">
+            <div class="modal-title">PASANG TARUHAN</div>
+            
+            <div class="modal-bet-info">
+                <div class="modal-bet-row">
+                    <div class="modal-bet-label">Jenis Taruhan:</div>
+                    <div class="modal-bet-value" id="modalBetType">HIJAU</div>
+                </div>
+                <div class="modal-bet-row">
+                    <div class="modal-bet-label">Mode:</div>
+                    <div class="modal-bet-value" id="modalGameMode">Super Cepat</div>
+                </div>
+                <div class="modal-bet-row">
+                    <div class="modal-bet-label">Periode:</div>
+                    <div class="modal-bet-value" id="modalPeriod">2025121000</div>
+                </div>
+                <div class="modal-bet-row">
+                    <div class="modal-bet-label">Multiplier:</div>
+                    <div class="modal-bet-value" id="modalMultiplier">x2.0</div>
+                </div>
+                <div class="modal-bet-row">
+                    <div class="modal-bet-label">Biaya Layanan (2%):</div>
+                    <div class="modal-bet-value" id="modalFee">20</div>
+                </div>
+            </div>
+            
+            <div class="bet-amount-controls">
+                <div class="amount-presets">
+                    <div class="amount-preset" data-amount="1000">1,000</div>
+                    <div class="amount-preset" data-amount="5000">5,000</div>
+                    <div class="amount-preset" data-amount="10000">10,000</div>
+                    <div class="amount-preset" data-amount="50000">50,000</div>
+                    <div class="amount-preset all-preset" data-amount="all">ALL</div>
+                </div>
+                
+                <div class="amount-input-container">
+                    <input type="number" class="amount-input" id="amountInput" value="1000" min="1000" max="100000" placeholder="Klik SET untuk mengedit" disabled>
+                    <button class="amount-set-btn" id="setAmountBtn">SET</button>
+                </div>
+                
+                <div class="modal-bet-row" style="margin-top: 15px;">
+                    <div class="modal-bet-label">Potensi Menang:</div>
+                    <div class="modal-bet-value" id="modalPotentialWin">2,000</div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" id="modalCancelBtn">BATAL</button>
+                <button class="modal-btn confirm" id="modalConfirmBtn" disabled>KONFIRMASI</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Result Modal -->
+    <div class="modal" id="resultModal">
+        <div class="result-modal-content">
+            <div class="result-title">HASIL PERIODE</div>
+            <div class="modal-message">
+                <div style="margin-bottom: 10px;">
+                    Periode <span id="resultPeriod" style="color: #ffd700;">2025121000</span><br>
+                    Mode: <span id="resultMode" style="color: #00cec9;">Super Cepat</span>
+                </div>
+                <div class="result-number" id="resultNumber">8</div>
+                <div class="result-type" id="resultType">MERAH - BESAR</div>
+            </div>
+            <div id="resultBetStatus" class="result-bet-status">
+                <!-- Status taruhan akan ditampilkan di sini -->
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn confirm" id="modalOkBtn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOdt92_kpm90XqFvF-4p1ful7uFW7t6qo",
+            authDomain: "wingo-1808a.firebaseapp.com",
+            databaseURL: "https://wingo-1808a-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "wingo-1808a",
+            storageBucket: "wingo-1808a.firebasestorage.app",
+            messagingSenderId: "510624036424",
+            appId: "1:510624036424:web:ad24360c4d154ebf68ca7d"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Global Variables
+        let gameData = {
+            saldo: 100000,
+            currentBet: {
+                type: null,
+                amount: 1000,
+                mode: 'supercepat',
+                number: null,
+                customAmountSet: false,
+                isManualInput: false
+            },
+            currentMode: 'supercepat',
+            myBets: [],
+            pendingBets: [],
+            showResultModal: true,
+            showKombinasi: true,
+            userId: null,
+            serverTimeOffset: 0,
+            lastPeriodCheck: {},
+            gameManagerInterval: null,
+            resultListeners: {},
+            historyCache: {
+                supercepat: [],
+                cepat: [],
+                standar: []
+            },
+            currentPeriodNumber: 0,
+            lastVisitTime: null
+        };
+
+        // Game Durations in seconds
+        const GAME_DURATIONS = {
+            supercepat: 30,
+            cepat: 60,
+            standar: 180
+        };
+
+        // Game Mode Names
+        const GAME_NAMES = {
+            supercepat: 'SILVER',
+            cepat: 'GOLD',
+            standar: 'BLACK'
+        };
+
+        // Game Mode Display Names
+        const GAME_DISPLAY_NAMES = {
+            supercepat: 'Super Cepat',
+            cepat: 'Cepat',
+            standar: 'Standar'
+        };
+
+        // Multiplier untuk setiap jenis taruhan
+        const betMultipliers = {
+            'hijau': 2.0,
+            'ungu': 4.5,
+            'merah': 2.0,
+            'kecil': 2.0,
+            'besar': 2.0,
+            'kecil-merah': 3.0,
+            'kecil-hijau': 4.5,
+            'besar-merah': 4.5,
+            'besar-hijau': 3.0,
+            'nomor': 9.0
+        };
+
+        // Multiplier khusus untuk Hijau/Merah saat hasil Ungu (1.5x)
+        const specialMultipliers = {
+            'hijau': 1.5,
+            'merah': 1.5
+        };
+
+        // Fungsi untuk mendapatkan tanggal hari ini dalam format YYYYMMDD
+        function getTodayDateString(timestamp = null) {
+            const now = timestamp ? new Date(timestamp) : getServerTime();
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            return `${year}${month}${day}`;
+        }
+
+        // Fungsi untuk mendapatkan waktu server yang sinkron
+        function getServerTime() {
+            return new Date(Date.now() + gameData.serverTimeOffset);
+        }
+
+        // Fungsi untuk menghitung periode berdasarkan waktu server
+        function calculatePeriodInfo(modeKey, timestamp) {
+            const duration = GAME_DURATIONS[modeKey];
+            const epochSeconds = Math.floor(timestamp / 1000);
+            const periodNumber = Math.floor(epochSeconds / duration);
+            const datePrefix = getTodayDateString(timestamp);
+            
+            // Hitung sisa waktu
+            const periodStart = periodNumber * duration;
+            const currentSecond = epochSeconds % duration;
+            const timeRemaining = duration - currentSecond;
+            
+            return {
+                periodNumber: periodNumber,
+                period: `${datePrefix}${(periodNumber % 100).toString().padStart(2, '0')}`,
+                timeRemaining: timeRemaining,
+                currentSecond: currentSecond,
+                bettingOpen: timeRemaining > 8,
+                epochSeconds: epochSeconds,
+                periodStart: periodStart,
+                periodEnd: periodStart + duration
+            };
+        }
+
+        // Fungsi untuk sinkronisasi waktu dengan Firebase
+        async function syncServerTime() {
+            try {
+                return new Promise((resolve) => {
+                    const startTime = Date.now();
+                    
+                    // Try to get server time from Firebase
+                    database.ref('.info/serverTimeOffset').once('value', (snapshot) => {
+                        const endTime = Date.now();
+                        const roundTripTime = endTime - startTime;
+                        
+                        if (snapshot.exists()) {
+                            const serverTimeOffset = snapshot.val();
+                            // Estimate server time considering network latency
+                            const estimatedServerTime = endTime + serverTimeOffset + (roundTripTime / 2);
+                            gameData.serverTimeOffset = estimatedServerTime - Date.now();
+                        } else {
+                            // Use local time as fallback
+                            gameData.serverTimeOffset = 0;
+                        }
+                        
+                        // Save sync time
+                        localStorage.setItem('wingo_time_sync', Date.now().toString());
+                        localStorage.setItem('wingo_time_offset', gameData.serverTimeOffset.toString());
+                        
+                        resolve(true);
+                    }, (error) => {
+                        console.error('Error getting server time:', error);
+                        gameData.serverTimeOffset = 0;
+                        resolve(false);
+                    });
+                });
+            } catch (error) {
+                console.error('Sync error:', error);
+                gameData.serverTimeOffset = 0;
+                return false;
+            }
+        }
+
+        // Fungsi untuk menampilkan toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <div class="toast-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</div>
+                <div class="toast-message">${message}</div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Inisialisasi aplikasi
+        async function initApp() {
+            try {
+                // Sinkronkan waktu server
+                await syncServerTime();
+                
+                // Generate atau load user ID
+                let userId = localStorage.getItem('wingo_user_id');
+                if (!userId) {
+                    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('wingo_user_id', userId);
+                }
+                gameData.userId = userId;
+                
+                // Load cached history from localStorage
+                loadCachedHistory();
+                
+                // Load user data
+                await loadUserData();
+                
+                // Setup UI
+                setupEventListeners();
+                initDisplay();
+                
+                // Start real-time updates
+                startRealTimeUpdates();
+                
+                // Start game manager
+                startGameManager();
+                
+                // Load initial history for current mode
+                await loadResultHistory();
+                
+                // Setup result listeners for all modes
+                setupResultListeners();
+                
+                // Check for missed periods since last visit
+                await checkMissedPeriods();
+                
+            } catch (error) {
+                console.error('Error initializing app:', error);
+                showToast('Gagal menyambungkan ke server', 'error');
+                
+                // Fallback
+                setupEventListeners();
+                initDisplay();
+                startRealTimeUpdates();
+                startGameManager();
+            }
+        }
+
+        // Load cached history from localStorage
+        function loadCachedHistory() {
+            try {
+                const cachedHistory = localStorage.getItem('wingo_history_cache');
+                if (cachedHistory) {
+                    const parsed = JSON.parse(cachedHistory);
+                    // Validate and load cache for each mode
+                    if (parsed.supercepat && Array.isArray(parsed.supercepat)) {
+                        gameData.historyCache.supercepat = parsed.supercepat.slice(0, 10);
+                    }
+                    if (parsed.cepat && Array.isArray(parsed.cepat)) {
+                        gameData.historyCache.cepat = parsed.cepat.slice(0, 10);
+                    }
+                    if (parsed.standar && Array.isArray(parsed.standar)) {
+                        gameData.historyCache.standar = parsed.standar.slice(0, 10);
+                    }
+                    console.log('✅ Riwayat cache berhasil dimuat dari localStorage');
+                }
+                
+                // Load last visit time
+                const lastVisit = localStorage.getItem('wingo_last_visit');
+                if (lastVisit) {
+                    gameData.lastVisitTime = parseInt(lastVisit);
+                } else {
+                    gameData.lastVisitTime = Date.now();
+                }
+            } catch (error) {
+                console.error('Error loading cached history:', error);
+            }
+        }
+
+        // Save history cache to localStorage
+        function saveHistoryCache() {
+            try {
+                localStorage.setItem('wingo_history_cache', JSON.stringify(gameData.historyCache));
+                localStorage.setItem('wingo_last_visit', Date.now().toString());
+            } catch (error) {
+                console.error('Error saving history cache:', error);
+            }
+        }
+
+        // Check for missed periods since last visit
+        async function checkMissedPeriods() {
+            try {
+                const now = getServerTime().getTime();
+                const lastVisit = gameData.lastVisitTime || now;
+                const timeSinceLastVisit = now - lastVisit;
+                
+                console.log(`⏰ Terakhir kunjung: ${new Date(lastVisit).toLocaleTimeString()}`);
+                console.log(`⏰ Sekarang: ${new Date(now).toLocaleTimeString()}`);
+                console.log(`⏰ Selisih waktu: ${Math.floor(timeSinceLastVisit / 1000)} detik`);
+                
+                // For each game mode, check for missed periods
+                for (const modeKey of ['supercepat', 'cepat', 'standar']) {
+                    const duration = GAME_DURATIONS[modeKey];
+                    const periodsMissed = Math.floor(timeSinceLastVisit / (duration * 1000));
+                    
+                    if (periodsMissed > 0) {
+                        console.log(`🔍 ${periodsMissed} periode terlewat untuk ${modeKey}`);
+                        
+                        // Get the last period from cache
+                        const lastCachedPeriod = gameData.historyCache[modeKey] && gameData.historyCache[modeKey].length > 0 
+                            ? gameData.historyCache[modeKey][0]?.period 
+                            : null;
+                        
+                        // Generate results for missed periods
+                        await generateMissedResults(modeKey, lastVisit, now, lastCachedPeriod);
+                    }
+                }
+                
+                // Update last visit time
+                gameData.lastVisitTime = now;
+                localStorage.setItem('wingo_last_visit', now.toString());
+                
+            } catch (error) {
+                console.error('Error checking missed periods:', error);
+            }
+        }
+
+        // Generate results for missed periods
+        async function generateMissedResults(modeKey, startTime, endTime, lastCachedPeriod) {
+            try {
+                const duration = GAME_DURATIONS[modeKey];
+                const startPeriodInfo = calculatePeriodInfo(modeKey, startTime);
+                const endPeriodInfo = calculatePeriodInfo(modeKey, endTime);
+                
+                const startPeriod = startPeriodInfo.periodNumber;
+                const endPeriod = endPeriodInfo.periodNumber;
+                
+                // We'll generate results for periods between start+1 and end-1
+                // (start period was already processed, current period is still running)
+                for (let periodNum = startPeriod + 1; periodNum < endPeriod; periodNum++) {
+                    const periodDate = getTodayDateString(startTime + ((periodNum - startPeriod) * duration * 1000));
+                    const periodKey = `${periodDate}${(periodNum % 100).toString().padStart(2, '0')}`;
+                    
+                    // Skip if this period already exists in cache
+                    if (lastCachedPeriod && periodKey === lastCachedPeriod) {
+                        continue;
+                    }
+                    
+                    // Check if result already exists in Firebase
+                    const resultRef = database.ref(`results/${modeKey}/${periodKey}`);
+                    const snapshot = await resultRef.once('value');
+                    
+                    if (!snapshot.exists()) {
+                        // Generate random result for missed period
+                        const resultNumber = Math.floor(Math.random() * 10);
+                        
+                        let resultType = '';
+                        let resultColor = '';
+                        
+                        if (resultNumber === 0 || resultNumber === 5) {
+                            resultType = 'UNGU';
+                            resultColor = 'ungu';
+                        } else if (resultNumber % 2 === 1) {
+                            resultType = 'HIJAU';
+                            resultColor = 'hijau';
+                        } else {
+                            resultType = 'MERAH';
+                            resultColor = 'merah';
+                        }
+                        
+                        const resultSize = resultNumber <= 4 ? 'KECIL' : 'BESAR';
+                        
+                        const result = {
+                            period: periodKey,
+                            number: resultNumber,
+                            type: resultType,
+                            size: resultSize,
+                            color: resultColor,
+                            mode: modeKey,
+                            timestamp: new Date(startTime + ((periodNum - startPeriod) * duration * 1000)).toISOString()
+                        };
+                        
+                        // Save to Firebase
+                        await resultRef.set(result);
+                        
+                        console.log(`⏳ Hasil untuk periode terlewat ${modeKey} periode ${periodKey}: ${resultNumber} (${resultType})`);
+                        
+                        // Cache result
+                        cacheResultForMode(modeKey, result);
+                    }
+                }
+                
+                // Save updated cache
+                saveHistoryCache();
+                
+            } catch (error) {
+                console.error(`Error generating missed results for ${modeKey}:`, error);
+            }
+        }
+
+        async function loadUserData() {
+            try {
+                // Load saldo
+                const saldoRef = database.ref(`users/${gameData.userId}/saldo`);
+                const saldoSnapshot = await saldoRef.once('value');
+                if (saldoSnapshot.exists()) {
+                    gameData.saldo = saldoSnapshot.val();
+                } else {
+                    await saldoRef.set(gameData.saldo);
+                }
+                
+                // Load settings
+                const settingsRef = database.ref(`users/${gameData.userId}/settings`);
+                const settingsSnapshot = await settingsRef.once('value');
+                if (settingsSnapshot.exists()) {
+                    const settings = settingsSnapshot.val();
+                    gameData.showResultModal = settings.showResultModal !== false;
+                    gameData.showKombinasi = settings.showKombinasi !== false;
+                }
+                
+                // Load user bets
+                const betsRef = database.ref(`bets/${gameData.userId}`);
+                const betsSnapshot = await betsRef.orderByChild('timestamp').limitToLast(50).once('value');
+                if (betsSnapshot.exists()) {
+                    gameData.myBets = [];
+                    betsSnapshot.forEach(childSnapshot => {
+                        const bet = childSnapshot.val();
+                        gameData.myBets.push(bet);
+                        
+                        if (bet.status === 'waiting') {
+                            gameData.pendingBets.push(bet);
+                        }
+                    });
+                    gameData.myBets.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                }
+                
+                updateSaldo();
+                
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        async function saveUserSettings() {
+            try {
+                await database.ref(`users/${gameData.userId}/settings`).set({
+                    showResultModal: gameData.showResultModal,
+                    showKombinasi: gameData.showKombinasi
+                });
+            } catch (error) {
+                console.error('Error saving settings:', error);
+            }
+        }
+
+        function setupEventListeners() {
+            // Tombol toggle popup hasil
+            document.getElementById('togglePopupBtn').addEventListener('click', function() {
+                gameData.showResultModal = !gameData.showResultModal;
+                if (gameData.showResultModal) {
+                    this.classList.add('active');
+                } else {
+                    this.classList.remove('active');
+                }
+                saveUserSettings();
+            });
+            
+            // Tombol toggle kombinasi
+            document.getElementById('toggleKombinasiBtn').addEventListener('click', function() {
+                gameData.showKombinasi = !gameData.showKombinasi;
+                const kombinasiGrid = document.getElementById('kombinasiGrid');
+                
+                if (gameData.showKombinasi) {
+                    kombinasiGrid.classList.remove('collapsed');
+                    this.classList.remove('collapsed');
+                } else {
+                    kombinasiGrid.classList.add('collapsed');
+                    this.classList.add('collapsed');
+                }
+                saveUserSettings();
+            });
+            
+            // Timer tabs
+            document.querySelectorAll('.timer-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    switchGameMode(this.dataset.mode);
+                });
+            });
+            
+            // Bet buttons
+            document.querySelectorAll('.bet-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const periodInfo = getCurrentPeriodInfo();
+                    if (!periodInfo.bettingOpen) {
+                        showToast('Taruhan sudah ditutup! Tunggu periode berikutnya.', 'error');
+                        return;
+                    }
+                    const betType = this.dataset.bet;
+                    showBetModal(betType);
+                });
+            });
+            
+            // Number buttons
+            document.querySelectorAll('.angka-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const periodInfo = getCurrentPeriodInfo();
+                    if (!periodInfo.bettingOpen) {
+                        showToast('Taruhan sudah ditutup! Tunggu periode berikutnya.', 'error');
+                        return;
+                    }
+                    const number = parseInt(this.dataset.number);
+                    showBetModal('nomor', number);
+                });
+            });
+            
+            // Amount presets
+            document.querySelectorAll('.amount-preset').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    selectBetAmount(this.dataset.amount);
+                });
+            });
+            
+            // Set amount button
+            document.getElementById('setAmountBtn').addEventListener('click', enableManualInput);
+            
+            // Amount input
+            document.getElementById('amountInput').addEventListener('input', validateManualInput);
+            
+            // Modal buttons
+            document.getElementById('modalCancelBtn').addEventListener('click', function() {
+                document.getElementById('betModal').style.display = 'none';
+                resetModalState();
+            });
+            
+            document.getElementById('modalConfirmBtn').addEventListener('click', placeBet);
+            
+            document.getElementById('modalOkBtn').addEventListener('click', function() {
+                document.getElementById('resultModal').style.display = 'none';
+            });
+            
+            // History tabs
+            document.querySelectorAll('.history-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    switchHistoryTab(this.dataset.history);
+                });
+            });
+            
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+            
+            // Save cache before page unload
+            window.addEventListener('beforeunload', saveHistoryCache);
+            
+            // Save last visit time periodically
+            setInterval(() => {
+                localStorage.setItem('wingo_last_visit', Date.now().toString());
+            }, 30000); // Save every 30 seconds
+        }
+
+        function initDisplay() {
+            updateSaldo();
+            updateCurrentTime();
+            updateCurrentModeDisplay();
+            
+            // Set toggle buttons
+            const togglePopupBtn = document.getElementById('togglePopupBtn');
+            if (gameData.showResultModal) {
+                togglePopupBtn.classList.add('active');
+            }
+            
+            const toggleKombinasiBtn = document.getElementById('toggleKombinasiBtn');
+            if (!gameData.showKombinasi) {
+                toggleKombinasiBtn.classList.add('collapsed');
+                document.getElementById('kombinasiGrid').classList.add('collapsed');
+            }
+        }
+
+        function getCurrentPeriodInfo() {
+            const currentTime = getServerTime().getTime();
+            const periodInfo = calculatePeriodInfo(gameData.currentMode, currentTime);
+            gameData.currentPeriodNumber = periodInfo.periodNumber;
+            return periodInfo;
+        }
+
+        function updateCurrentModeDisplay() {
+            const periodInfo = getCurrentPeriodInfo();
+            
+            // Update timer display
+            const minutes = Math.floor(periodInfo.timeRemaining / 60);
+            const seconds = periodInfo.timeRemaining % 60;
+            document.getElementById('timerDisplay').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update period display
+            document.getElementById('currentPeriod').textContent = periodInfo.period;
+            
+            // Update betting status
+            updateBettingButtonStatus(periodInfo.bettingOpen);
+            
+            // Update timer color
+            const timerDisplay = document.getElementById('timerDisplay');
+            if (periodInfo.timeRemaining <= 8) {
+                timerDisplay.style.color = '#ff4444';
+                timerDisplay.style.textShadow = '0 0 10px rgba(255, 68, 68, 0.5)';
+            } else {
+                timerDisplay.style.color = '#00ff88';
+                timerDisplay.style.textShadow = '0 0 10px rgba(0, 255, 136, 0.5)';
+            }
+        }
+
+        function updateBettingButtonStatus(bettingOpen) {
+            const betButtons = document.querySelectorAll('.bet-button, .angka-btn');
+            
+            if (bettingOpen) {
+                betButtons.forEach(btn => {
+                    btn.classList.remove('betting-closed');
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                });
+            } else {
+                betButtons.forEach(btn => {
+                    btn.classList.add('betting-closed');
+                    btn.style.opacity = '0.6';
+                    btn.style.pointerEvents = 'none';
+                });
+            }
+        }
+
+        function updateSaldo() {
+            document.getElementById('saldoValue').textContent = gameData.saldo.toLocaleString();
+        }
+
+        function updateCurrentTime() {
+            const now = getServerTime();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
+            
+            setTimeout(updateCurrentTime, 1000);
+        }
+
+        function startRealTimeUpdates() {
+            // Update timer setiap detik
+            setInterval(() => {
+                updateCurrentModeDisplay();
+            }, 1000);
+        }
+
+        // GAME MANAGER - Yang menghasilkan hasil ketika periode berakhir
+        function startGameManager() {
+            if (gameData.gameManagerInterval) {
+                clearInterval(gameData.gameManagerInterval);
+            }
+            
+            gameData.gameManagerInterval = setInterval(async () => {
+                const currentTime = getServerTime().getTime();
+                
+                // Check each game mode
+                for (const modeKey of ['supercepat', 'cepat', 'standar']) {
+                    const periodInfo = calculatePeriodInfo(modeKey, currentTime);
+                    
+                    // Jika waktu periode kurang dari 2 detik, cek apakah sudah generate hasil
+                    if (periodInfo.timeRemaining < 2 && periodInfo.timeRemaining > 0) {
+                        await checkAndGenerateResult(modeKey, periodInfo);
+                    }
+                }
+            }, 1000);
+        }
+
+        async function checkAndGenerateResult(modeKey, periodInfo) {
+            const periodKey = periodInfo.period;
+            
+            // Skip jika sudah dicek periode ini
+            if (gameData.lastPeriodCheck[modeKey] === periodKey) {
+                return;
+            }
+            
+            gameData.lastPeriodCheck[modeKey] = periodKey;
+            
+            try {
+                // Cek apakah hasil sudah ada
+                const resultRef = database.ref(`results/${modeKey}/${periodKey}`);
+                const snapshot = await resultRef.once('value');
+                
+                if (!snapshot.exists()) {
+                    // Generate random result
+                    const resultNumber = Math.floor(Math.random() * 10);
+                    
+                    let resultType = '';
+                    let resultColor = '';
+                    
+                    if (resultNumber === 0 || resultNumber === 5) {
+                        resultType = 'UNGU';
+                        resultColor = 'ungu';
+                    } else if (resultNumber % 2 === 1) {
+                        resultType = 'HIJAU';
+                        resultColor = 'hijau';
+                    } else {
+                        resultType = 'MERAH';
+                        resultColor = 'merah';
+                    }
+                    
+                    const resultSize = resultNumber <= 4 ? 'KECIL' : 'BESAR';
+                    
+                    const result = {
+                        period: periodKey,
+                        number: resultNumber,
+                        type: resultType,
+                        size: resultSize,
+                        color: resultColor,
+                        mode: modeKey,
+                        timestamp: getServerTime().toISOString()
+                    };
+                    
+                    // Save to Firebase
+                    await resultRef.set(result);
+                    
+                    console.log(`✅ Hasil untuk ${modeKey} periode ${periodKey}: ${resultNumber} (${resultType} - ${resultSize})`);
+                    
+                    // Process bets immediately
+                    await processBetsForResult(modeKey, result);
+                    
+                    // Cache result for this mode
+                    cacheResultForMode(modeKey, result);
+                    
+                    // Save cache to localStorage
+                    saveHistoryCache();
+                    
+                    // Update history if current mode and showing results tab
+                    if (modeKey === gameData.currentMode && document.querySelector('.history-tab.active').dataset.history === 'hasil') {
+                        updateHistoryWithNewResult(result);
+                    }
+                    
+                    // Show modal if enabled and current mode
+                    if (gameData.showResultModal && modeKey === gameData.currentMode) {
+                        setTimeout(() => {
+                            showResultModal(result);
+                        }, 500);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error generating result:', error);
+            }
+        }
+
+        function cacheResultForMode(modeKey, result) {
+            // Add to cache
+            if (!gameData.historyCache[modeKey]) {
+                gameData.historyCache[modeKey] = [];
+            }
+            
+            // Check if result already exists in cache
+            const exists = gameData.historyCache[modeKey].some(r => r.period === result.period);
+            if (!exists) {
+                // Add to beginning of cache (newest first)
+                gameData.historyCache[modeKey].unshift(result);
+                
+                // Keep only last 10 results
+                if (gameData.historyCache[modeKey].length > 10) {
+                    gameData.historyCache[modeKey] = gameData.historyCache[modeKey].slice(0, 10);
+                }
+                
+                console.log(`💾 Cache untuk ${modeKey} diperbarui: ${gameData.historyCache[modeKey].length} hasil`);
+            }
+        }
+
+        function updateHistoryWithNewResult(result) {
+            const historyBody = document.getElementById('historyBody');
+            
+            // Add new result to the beginning
+            addHistoryRowToTable(result, true);
+            
+            // Keep only 10 rows
+            const rows = historyBody.querySelectorAll('tr');
+            if (rows.length > 10) {
+                for (let i = 10; i < rows.length; i++) {
+                    rows[i].remove();
+                }
+            }
+        }
+
+        function switchGameMode(mode) {
+            document.querySelectorAll('.timer-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`.timer-tab[data-mode="${mode}"]`).classList.add('active');
+            
+            gameData.currentMode = mode;
+            updateCurrentModeDisplay();
+            
+            if (document.querySelector('.history-tab.active').dataset.history === 'hasil') {
+                // Use cached data immediately
+                renderCachedHistory(mode);
+                
+                // Also load from Firebase for real-time updates
+                loadResultHistory();
+            } else {
+                updateMyBetHistory();
+            }
+        }
+
+        function showBetModal(betType, number = null) {
+            const periodInfo = getCurrentPeriodInfo();
+            
+            if (!periodInfo.bettingOpen) {
+                showToast('Taruhan sudah ditutup! Tunggu periode berikutnya.', 'error');
+                return;
+            }
+            
+            // Reset bet data
+            gameData.currentBet.type = betType;
+            gameData.currentBet.mode = gameData.currentMode;
+            gameData.currentBet.number = number;
+            gameData.currentBet.customAmountSet = false;
+            gameData.currentBet.isManualInput = false;
+            gameData.currentBet.amount = 1000;
+            
+            // Update modal display
+            document.getElementById('modalBetType').textContent = getBetDisplayName(betType, number);
+            document.getElementById('modalGameMode').textContent = GAME_DISPLAY_NAMES[gameData.currentMode];
+            document.getElementById('modalPeriod').textContent = periodInfo.period;
+            
+            const multiplier = betType === 'nomor' ? 9.0 : (betMultipliers[betType] || 1);
+            document.getElementById('modalMultiplier').textContent = `x${multiplier}`;
+            
+            // Reset input
+            document.getElementById('amountInput').value = '1000';
+            document.getElementById('amountInput').disabled = true;
+            document.getElementById('amountInput').classList.remove('editable');
+            document.getElementById('amountInput').placeholder = 'Klik SET untuk mengedit';
+            
+            document.getElementById('setAmountBtn').textContent = 'SET';
+            document.getElementById('setAmountBtn').classList.remove('active');
+            document.getElementById('modalConfirmBtn').disabled = true;
+            
+            // Update presets
+            updateAmountPresets();
+            updateBetModalInfo(multiplier);
+            
+            // Show modal
+            document.getElementById('betModal').style.display = 'flex';
+        }
+
+        function getBetDisplayName(betType, number = null) {
+            const names = {
+                'hijau': 'HIJAU',
+                'ungu': 'UNGU',
+                'merah': 'MERAH',
+                'kecil': 'KECIL',
+                'besar': 'BESAR',
+                'kecil-merah': 'KECIL & MERAH',
+                'kecil-hijau': 'KECIL & HIJAU',
+                'besar-merah': 'BESAR & MERAH',
+                'besar-hijau': 'BESAR & HIJAU',
+                'nomor': `TEBAK NOMOR ${number}`
+            };
+            return names[betType] || betType.toUpperCase();
+        }
+
+        function enableManualInput() {
+            const amountInput = document.getElementById('amountInput');
+            
+            amountInput.disabled = false;
+            amountInput.classList.add('editable');
+            amountInput.focus();
+            amountInput.select();
+            
+            gameData.currentBet.isManualInput = true;
+            
+            document.querySelectorAll('.amount-preset').forEach(preset => {
+                preset.classList.remove('active');
+            });
+            
+            document.getElementById('setAmountBtn').classList.add('active');
+            document.getElementById('setAmountBtn').textContent = 'EDIT';
+            
+            document.getElementById('modalConfirmBtn').disabled = true;
+            
+            validateManualInput();
+        }
+
+        function validateManualInput() {
+            const amountInput = document.getElementById('amountInput');
+            const amount = parseInt(amountInput.value);
+            
+            document.getElementById('modalConfirmBtn').disabled = true;
+            
+            if (isNaN(amount) || amount < 1000) {
+                return;
+            }
+            
+            if (amount > gameData.saldo) {
+                return;
+            }
+            
+            if (amount > 100000) {
+                return;
+            }
+            
+            document.getElementById('modalConfirmBtn').disabled = false;
+            
+            gameData.currentBet.amount = amount;
+            gameData.currentBet.customAmountSet = true;
+            
+            const multiplier = gameData.currentBet.type === 'nomor' ? 9.0 : 
+                              (betMultipliers[gameData.currentBet.type] || 1);
+            updateBetModalInfo(multiplier);
+        }
+
+        function selectBetAmount(amount) {
+            if (amount === 'all') {
+                gameData.currentBet.amount = gameData.saldo;
+                document.getElementById('amountInput').value = gameData.saldo;
+            } else {
+                const amountNum = parseInt(amount);
+                if (amountNum > gameData.saldo) {
+                    showToast('Saldo tidak cukup!', 'error');
+                    return;
+                }
+                gameData.currentBet.amount = amountNum;
+                document.getElementById('amountInput').value = amountNum;
+            }
+            
+            document.getElementById('amountInput').disabled = true;
+            document.getElementById('amountInput').classList.remove('editable');
+            gameData.currentBet.isManualInput = false;
+            
+            document.getElementById('setAmountBtn').classList.remove('active');
+            document.getElementById('setAmountBtn').textContent = 'SET';
+            
+            updateAmountPresets();
+            
+            gameData.currentBet.customAmountSet = true;
+            document.getElementById('modalConfirmBtn').disabled = false;
+            
+            const multiplier = gameData.currentBet.type === 'nomor' ? 9.0 : 
+                              (betMultipliers[gameData.currentBet.type] || 1);
+            updateBetModalInfo(multiplier);
+        }
+
+        function updateAmountPresets() {
+            document.querySelectorAll('.amount-preset').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.amount === 'all' && gameData.currentBet.amount === gameData.saldo) {
+                    btn.classList.add('active');
+                } else if (parseInt(btn.dataset.amount) === gameData.currentBet.amount) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        function updateBetModalInfo(multiplier) {
+            const fee = Math.floor(gameData.currentBet.amount * 0.02);
+            const contractAmount = gameData.currentBet.amount - fee;
+            const potentialWin = Math.floor(contractAmount * multiplier);
+            
+            document.getElementById('modalFee').textContent = fee.toLocaleString();
+            document.getElementById('modalPotentialWin').textContent = potentialWin.toLocaleString();
+        }
+
+        async function placeBet() {
+            const periodInfo = getCurrentPeriodInfo();
+            
+            if (!gameData.currentBet.customAmountSet) {
+                showToast('Silakan set jumlah taruhan terlebih dahulu!', 'error');
+                return;
+            }
+            
+            if (gameData.currentBet.amount > gameData.saldo) {
+                showToast('Saldo tidak cukup!', 'error');
+                return;
+            }
+            
+            if (!periodInfo.bettingOpen) {
+                showToast('Taruhan sudah ditutup!', 'error');
+                document.getElementById('betModal').style.display = 'none';
+                resetModalState();
+                return;
+            }
+            
+            const fee = Math.floor(gameData.currentBet.amount * 0.02);
+            const contractAmount = gameData.currentBet.amount - fee;
+            const multiplier = gameData.currentBet.type === 'nomor' ? 9.0 : 
+                              (betMultipliers[gameData.currentBet.type] || 1);
+            
+            const bet = {
+                id: Date.now(),
+                period: periodInfo.period,
+                mode: gameData.currentMode,
+                type: gameData.currentBet.type,
+                number: gameData.currentBet.number,
+                amount: gameData.currentBet.amount,
+                fee: fee,
+                contractAmount: contractAmount,
+                timestamp: new Date().toISOString(),
+                status: 'waiting',
+                result: null,
+                profit: 0,
+                winAmount: 0,
+                multiplier: multiplier,
+                userId: gameData.userId
+            };
+            
+            try {
+                // Kurangi saldo
+                gameData.saldo -= gameData.currentBet.amount;
+                updateSaldo();
+                
+                // Tambahkan ke pendingBets
+                gameData.pendingBets.push(bet);
+                
+                // Tambahkan ke myBets
+                gameData.myBets.unshift(bet);
+                
+                // Save to Firebase
+                await saveBetToFirebase(bet);
+                
+                if (document.querySelector('.history-tab.active').dataset.history === 'saya') {
+                    updateMyBetHistory();
+                }
+                
+                document.getElementById('betModal').style.display = 'none';
+                resetModalState();
+                
+                showToast(`Taruhan ${gameData.currentBet.amount.toLocaleString()} berhasil ditempatkan pada periode ${periodInfo.period}!`, 'success');
+                
+            } catch (error) {
+                console.error('Error placing bet:', error);
+                showToast('Gagal menempatkan taruhan!', 'error');
+                
+                // Rollback
+                gameData.saldo += gameData.currentBet.amount;
+                updateSaldo();
+                gameData.pendingBets = gameData.pendingBets.filter(b => b.id !== bet.id);
+                gameData.myBets = gameData.myBets.filter(b => b.id !== bet.id);
+            }
+        }
+
+        async function saveBetToFirebase(bet) {
+            try {
+                const betRef = database.ref(`bets/${gameData.userId}/${bet.id}`);
+                await betRef.set(bet);
+                
+                // Update saldo di Firebase
+                await database.ref(`users/${gameData.userId}/saldo`).set(gameData.saldo);
+            } catch (error) {
+                console.error('Error saving bet:', error);
+                throw error;
+            }
+        }
+
+        function resetModalState() {
+            gameData.currentBet.customAmountSet = false;
+            gameData.currentBet.isManualInput = false;
+            
+            document.getElementById('modalConfirmBtn').disabled = true;
+            document.getElementById('setAmountBtn').classList.remove('active');
+            document.getElementById('setAmountBtn').textContent = 'SET';
+            document.getElementById('amountInput').disabled = true;
+            document.getElementById('amountInput').classList.remove('editable');
+            document.getElementById('amountInput').placeholder = 'Klik SET untuk mengedit';
+        }
+
+        async function loadResultHistory() {
+            try {
+                const modeKey = gameData.currentMode;
+                const resultsRef = database.ref(`results/${modeKey}`);
+                const snapshot = await resultsRef.orderByChild('timestamp').limitToLast(20).once('value');
+                
+                const historyBody = document.getElementById('historyBody');
+                
+                if (snapshot.exists()) {
+                    const results = [];
+                    snapshot.forEach(childSnapshot => {
+                        results.push(childSnapshot.val());
+                    });
+                    
+                    // Sort by timestamp descending (newest first)
+                    results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                    
+                    // Clear current display
+                    historyBody.innerHTML = '';
+                    
+                    // Add to cache and render
+                    results.slice(0, 10).forEach(result => {
+                        cacheResultForMode(modeKey, result);
+                        addHistoryRowToTable(result, false);
+                    });
+                    
+                    // Save updated cache
+                    saveHistoryCache();
+                    
+                    console.log(`📊 ${results.length} hasil dimuat untuk ${modeKey}`);
+                } else {
+                    // If no results in Firebase, use cached data
+                    console.log(`📊 Tidak ada hasil di Firebase untuk ${modeKey}, menggunakan cache`);
+                    renderCachedHistory(modeKey);
+                }
+                
+            } catch (error) {
+                console.error('Error loading result history:', error);
+                // Fallback to cached data
+                renderCachedHistory(gameData.currentMode);
+            }
+        }
+
+        function renderCachedHistory(modeKey) {
+            const historyBody = document.getElementById('historyBody');
+            historyBody.innerHTML = '';
+            
+            if (gameData.historyCache[modeKey] && gameData.historyCache[modeKey].length > 0) {
+                // Render cached results (already sorted newest first)
+                gameData.historyCache[modeKey].forEach(result => {
+                    addHistoryRowToTable(result, false);
+                });
+                console.log(`📊 ${gameData.historyCache[modeKey].length} hasil cache ditampilkan untuk ${modeKey}`);
+            } else {
+                // Generate dummy data for current mode
+                renderDummyHistory();
+                console.log(`📊 Menampilkan data dummy untuk ${modeKey}`);
+            }
+        }
+
+        function renderDummyHistory() {
+            const historyBody = document.getElementById('historyBody');
+            historyBody.innerHTML = '';
+            
+            // Generate dummy data for current mode
+            const currentTime = getServerTime().getTime();
+            const modeKey = gameData.currentMode;
+            
+            for (let i = 0; i < 10; i++) {
+                const periodInfo = calculatePeriodInfo(modeKey, currentTime - ((i + 1) * GAME_DURATIONS[modeKey] * 1000));
+                const dummyResult = generateDummyResult(periodInfo.period, modeKey);
+                addHistoryRowToTable(dummyResult, false);
+            }
+        }
+
+        function generateDummyResult(period, modeKey) {
+            const randomNumber = Math.floor(Math.random() * 10);
+            let resultType = '';
+            let resultColor = '';
+            
+            if (randomNumber === 0 || randomNumber === 5) {
+                resultType = 'UNGU';
+                resultColor = 'ungu';
+            } else if (randomNumber % 2 === 1) {
+                resultType = 'HIJAU';
+                resultColor = 'hijau';
+            } else {
+                resultType = 'MERAH';
+                resultColor = 'merah';
+            }
+            
+            const resultSize = randomNumber <= 4 ? 'KECIL' : 'BESAR';
+            
+            return {
+                period: period,
+                number: randomNumber,
+                type: resultType,
+                size: resultSize,
+                color: resultColor,
+                mode: modeKey,
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        function addHistoryRowToTable(result, insertAtTop = true) {
+            const historyBody = document.getElementById('historyBody');
+            const periodDisplay = result.period.slice(-2);
+            
+            let jenisText = result.size;
+            let jenisClass = result.number <= 4 ? 'size-kecil' : 'size-besar';
+            
+            let statusIndicator = '';
+            if (result.color === 'hijau') {
+                statusIndicator = `<span class="color-indicator">
+                    <span class="color-dot dot-hijau"></span>
+                    HIJAU
+                </span>`;
+            } else if (result.color === 'ungu') {
+                statusIndicator = `<span class="color-indicator">
+                    <span class="color-dot dot-ungu"></span>
+                    UNGU
+                </span>`;
+            } else {
+                statusIndicator = `<span class="color-indicator">
+                    <span class="color-dot dot-merah"></span>
+                    MERAH
+                </span>`;
+            }
+            
+            // Cek apakah baris dengan periode ini sudah ada
+            const existingRows = historyBody.querySelectorAll('tr');
+            let rowExists = false;
+            let existingRow = null;
+            
+            existingRows.forEach(row => {
+                const periodCell = row.querySelector('td:first-child');
+                if (periodCell && periodCell.textContent === periodDisplay) {
+                    rowExists = true;
+                    existingRow = row;
+                }
+            });
+            
+            if (rowExists && existingRow) {
+                // Update existing row
+                const cells = existingRow.querySelectorAll('td');
+                cells[1].textContent = result.number;
+                cells[1].style.fontWeight = 'bold';
+                cells[1].style.fontSize = '16px';
+                cells[2].textContent = jenisText;
+                cells[2].className = `size-text ${jenisClass}`;
+                cells[3].innerHTML = statusIndicator;
+                
+                // Move to top if it's a new result
+                if (insertAtTop && existingRow !== historyBody.firstChild) {
+                    historyBody.removeChild(existingRow);
+                    historyBody.insertBefore(existingRow, historyBody.firstChild);
+                }
+            } else {
+                // Create new row
+                const row = document.createElement('tr');
+                row.dataset.period = result.period;
+                row.dataset.mode = result.mode;
+                row.innerHTML = `
+                    <td>${periodDisplay}</td>
+                    <td style="font-weight: bold; font-size: 16px;">${result.number}</td>
+                    <td class="size-text ${jenisClass}">${jenisText}</td>
+                    <td>${statusIndicator}</td>
+                `;
+                
+                // Insert at the correct position
+                if (insertAtTop) {
+                    // Insert at the beginning for new results
+                    if (historyBody.firstChild) {
+                        historyBody.insertBefore(row, historyBody.firstChild);
+                    } else {
+                        historyBody.appendChild(row);
+                    }
+                } else {
+                    // Find correct position to maintain descending order by period
+                    let inserted = false;
+                    const rows = historyBody.querySelectorAll('tr');
+                    
+                    for (let i = 0; i < rows.length; i++) {
+                        const rowPeriod = rows[i].dataset.period;
+                        if (rowPeriod && parseInt(rowPeriod.slice(-2)) < parseInt(periodDisplay.slice(-2))) {
+                            historyBody.insertBefore(row, rows[i]);
+                            inserted = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!inserted) {
+                        historyBody.appendChild(row);
+                    }
+                }
+                
+                // Keep only 10 rows
+                const rows = historyBody.querySelectorAll('tr');
+                if (rows.length > 10) {
+                    for (let i = 10; i < rows.length; i++) {
+                        rows[i].remove();
+                    }
+                }
+            }
+        }
+
+        function setupResultListeners() {
+            // Setup listeners for all modes
+            for (const modeKey of ['supercepat', 'cepat', 'standar']) {
+                setupResultListener(modeKey);
+            }
+        }
+
+        function setupResultListener(modeKey) {
+            // Remove existing listener if any
+            if (gameData.resultListeners[modeKey]) {
+                database.ref(`results/${modeKey}`).off('child_added', gameData.resultListeners[modeKey]);
+            }
+            
+            // Create new listener
+            const listener = (snapshot) => {
+                const result = snapshot.val();
+                
+                console.log(`🎯 Hasil baru untuk ${modeKey}: ${result.period} - ${result.number} (${result.type})`);
+                
+                // Cache result
+                cacheResultForMode(modeKey, result);
+                
+                // Save cache to localStorage
+                saveHistoryCache();
+                
+                // Process bets
+                processBetsForResult(modeKey, result);
+                
+                // Update UI if this is the current mode and showing results tab
+                if (modeKey === gameData.currentMode && document.querySelector('.history-tab.active').dataset.history === 'hasil') {
+                    updateHistoryWithNewResult(result);
+                    
+                    // Show modal if enabled
+                    if (gameData.showResultModal) {
+                        setTimeout(() => {
+                            showResultModal(result);
+                        }, 500);
+                    }
+                }
+            };
+            
+            // Save listener reference
+            gameData.resultListeners[modeKey] = listener;
+            
+            // Start listening
+            database.ref(`results/${modeKey}`).limitToLast(1).on('child_added', listener);
+        }
+
+        function updateMyBetHistory() {
+            const historyBody = document.getElementById('historyBody');
+            historyBody.innerHTML = '';
+            
+            const headers = document.querySelectorAll('.history-table th');
+            headers[0].textContent = 'PERIODE';
+            headers[1].textContent = 'JENIS';
+            headers[2].textContent = 'JUMLAH';
+            headers[3].textContent = 'HASIL';
+            
+            const modeBets = gameData.myBets.filter(bet => bet.mode === gameData.currentMode);
+            
+            if (modeBets.length > 0) {
+                // Sort by timestamp descending (newest first)
+                modeBets.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                modeBets.slice(0, 10).forEach(bet => {
+                    const row = document.createElement('tr');
+                    
+                    let statusClass = '';
+                    let statusText = '';
+                    
+                    if (bet.status === 'waiting') {
+                        statusClass = 'waiting';
+                        statusText = 'MENUNGGU';
+                    } else if (bet.status === 'win') {
+                        statusClass = 'profit';
+                        statusText = `MENANG +${bet.winAmount?.toLocaleString() || '0'}`;
+                    } else if (bet.status === 'lose') {
+                        statusClass = 'loss';
+                        statusText = `KALAH -${bet.amount.toLocaleString()}`;
+                    } else {
+                        statusClass = '';
+                        statusText = '-';
+                    }
+                    
+                    let betTypeDisplay = getBetDisplayName(bet.type, bet.number);
+                    if (bet.type === 'nomor') {
+                        betTypeDisplay = `NOMOR ${bet.number}`;
+                    }
+                    
+                    const periodDisplay = bet.period.slice(-2);
+                    
+                    row.innerHTML = `
+                        <td>${periodDisplay}</td>
+                        <td>${betTypeDisplay}</td>
+                        <td>${bet.amount.toLocaleString()}</td>
+                        <td class="${statusClass}">${statusText}</td>
+                    `;
+                    
+                    historyBody.appendChild(row);
+                });
+            } else {
+                historyBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 30px; color: #8f9bb3;">
+                            Belum ada taruhan pada mode ini
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function switchHistoryTab(tabType) {
+            document.querySelectorAll('.history-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`.history-tab[data-history="${tabType}"]`).classList.add('active');
+            
+            const headers = document.querySelectorAll('.history-table th');
+            
+            if (tabType === 'hasil') {
+                headers[0].textContent = 'PERIODE';
+                headers[1].textContent = 'HASIL';
+                headers[2].textContent = 'JENIS';
+                headers[3].textContent = 'STATUS';
+                
+                // Use cached data immediately for fast display
+                renderCachedHistory(gameData.currentMode);
+                
+                // Also load from Firebase for real-time updates
+                setTimeout(() => {
+                    loadResultHistory();
+                }, 100);
+            } else if (tabType === 'saya') {
+                updateMyBetHistory();
+            }
+        }
+
+        async function processBetsForResult(modeKey, result) {
+            console.log(`🔄 Memproses taruhan untuk ${modeKey} periode ${result.period}`);
+            
+            // Find pending bets for this period
+            const relevantBets = gameData.pendingBets.filter(bet => 
+                bet.mode === modeKey && 
+                bet.period === result.period &&
+                bet.status === 'waiting'
+            );
+            
+            console.log(`📊 Ditemukan ${relevantBets.length} taruhan yang menunggu`);
+            
+            for (const bet of relevantBets) {
+                try {
+                    const isWin = checkBetWin(bet, result);
+                    const actualMultiplier = getActualMultiplier(bet, result);
+                    
+                    const winAmount = isWin ? Math.floor(bet.contractAmount * actualMultiplier) : 0;
+                    const profit = winAmount - bet.amount;
+                    
+                    const updateData = {
+                        status: isWin ? 'win' : 'lose',
+                        result: isWin ? `MENANG +${winAmount.toLocaleString()}` : `KALAH -${bet.amount.toLocaleString()}`,
+                        profit: profit,
+                        winAmount: winAmount,
+                        resultNumber: result.number,
+                        resultType: result.type,
+                        resultSize: result.size,
+                        processed: true
+                    };
+                    
+                    console.log(`💰 Taruhan ${bet.id}: ${isWin ? 'MENANG' : 'KALAH'} - ${updateData.result}`);
+                    
+                    // Update bet in Firebase
+                    const betRef = database.ref(`bets/${gameData.userId}/${bet.id}`);
+                    await betRef.update(updateData);
+                    
+                    // Update local data
+                    const localIndex = gameData.myBets.findIndex(b => b.id === bet.id);
+                    if (localIndex !== -1) {
+                        gameData.myBets[localIndex] = { ...bet, ...updateData };
+                    }
+                    
+                    // Update saldo if win
+                    if (isWin) {
+                        gameData.saldo += winAmount;
+                        updateSaldo();
+                        
+                        // Update saldo in Firebase
+                        await database.ref(`users/${gameData.userId}/saldo`).set(gameData.saldo);
+                    }
+                    
+                    // Remove from pending bets
+                    gameData.pendingBets = gameData.pendingBets.filter(b => b.id !== bet.id);
+                    
+                    // Update UI if showing my bets
+                    if (document.querySelector('.history-tab.active')?.dataset.history === 'saya' && 
+                        gameData.currentMode === modeKey) {
+                        updateMyBetHistory();
+                    }
+                    
+                } catch (error) {
+                    console.error(`Error processing bet ${bet.id}:`, error);
+                }
+            }
+        }
+
+        function checkBetWin(bet, result) {
+            if (bet.type === 'hijau') {
+                if (result.type === 'UNGU' && result.number === 5) {
+                    return true;
+                }
+                return result.type === 'HIJAU';
+            } else if (bet.type === 'ungu') {
+                return result.type === 'UNGU';
+            } else if (bet.type === 'merah') {
+                if (result.type === 'UNGU' && result.number === 0) {
+                    return true;
+                }
+                return result.type === 'MERAH';
+            } else if (bet.type === 'kecil') {
+                return result.number <= 4;
+            } else if (bet.type === 'besar') {
+                return result.number >= 5;
+            } else if (bet.type === 'nomor') {
+                return bet.number === result.number;
+            } else if (bet.type === 'kecil-merah') {
+                return [0, 2, 4].includes(result.number);
+            } else if (bet.type === 'kecil-hijau') {
+                return [1, 3].includes(result.number);
+            } else if (bet.type === 'besar-merah') {
+                return [6, 8].includes(result.number);
+            } else if (bet.type === 'besar-hijau') {
+                return [5, 7, 9].includes(result.number);
+            }
+            return false;
+        }
+
+        function getActualMultiplier(bet, result) {
+            let multiplier = bet.multiplier;
+            
+            // Special case for hijau/merah when result is ungu
+            if ((bet.type === 'hijau' || bet.type === 'merah') && result.type === 'UNGU') {
+                multiplier = specialMultipliers[bet.type];
+            }
+            
+            return multiplier;
+        }
+
+        function showResultModal(result) {
+            document.getElementById('resultPeriod').textContent = result.period;
+            document.getElementById('resultMode').textContent = GAME_DISPLAY_NAMES[result.mode];
+            document.getElementById('resultNumber').textContent = result.number;
+            
+            let resultTypeText = `${result.type} - ${result.size}`;
+            if (result.type === 'HIJAU') {
+                resultTypeText = `<span style="color: #00b894">${resultTypeText}</span>`;
+            } else if (result.type === 'UNGU') {
+                resultTypeText = `<span style="color: #a29bfe">${resultTypeText}</span>`;
+            } else {
+                resultTypeText = `<span style="color: #e94560">${resultTypeText}</span>`;
+            }
+            document.getElementById('resultType').innerHTML = resultTypeText;
+            
+            // Find user bets for this period
+            const userBets = gameData.myBets.filter(bet => 
+                bet.mode === result.mode && 
+                bet.period === result.period
+            );
+            
+            let betStatusHTML = '';
+            if (userBets.length > 0) {
+                userBets.forEach(bet => {
+                    const isWin = bet.status === 'win';
+                    const resultText = bet.result || (bet.status === 'waiting' ? 'MENUNGGU' : '-');
+                    
+                    betStatusHTML += `
+                        <div style="margin: 10px 0; padding: 10px; background: ${isWin ? 'rgba(0, 184, 148, 0.2)' : 'rgba(233, 69, 96, 0.2)'}; border-radius: 5px; text-align: left;">
+                            <div style="font-weight: bold; margin-bottom: 5px;">
+                                ${getBetDisplayName(bet.type, bet.number)} 
+                            </div>
+                            <div style="margin-bottom: 3px; font-size: 12px; color: #8f9bb3;">
+                                Taruhan: ${bet.amount.toLocaleString()}<br>
+                                Kontrak: ${bet.contractAmount?.toLocaleString() || '0'}
+                            </div>
+                            <div style="color: ${isWin ? '#00ff88' : '#ff4444'}; font-weight: bold;">
+                                ${resultText}
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                betStatusHTML = '<div style="margin: 10px 0; color: #8f9bb3;">Tidak ada taruhan pada periode ini</div>';
+            }
+            
+            document.getElementById('resultBetStatus').innerHTML = betStatusHTML;
+            document.getElementById('resultModal').style.display = 'flex';
+        }
+
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
